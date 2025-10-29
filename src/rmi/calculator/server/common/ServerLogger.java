@@ -1,4 +1,4 @@
-package rmi.calculator.server;
+package rmi.calculator.server.common;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;

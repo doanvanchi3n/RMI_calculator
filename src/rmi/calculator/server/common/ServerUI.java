@@ -1,14 +1,16 @@
-package rmi.calculator.server;
+package rmi.calculator.server.common;
 
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.function.Function;
 import javax.swing.*;
 
 public class ServerUI extends JFrame {
@@ -17,15 +19,17 @@ public class ServerUI extends JFrame {
     private final JButton stopButton = new JButton("Stop Server");
 
     private ServerLogger logger;
-    private CalculatorServiceImpl serviceImpl;
+    private Remote serviceImpl;
     private Registry registry;
     private final int port;
     private final String bindingName;
+    private final Function<ServerLogger, Remote> serviceFactory;
 
-    public ServerUI(int port, String bindingName) {
-        super("RMI Scientific Calculator - Server");
+    public ServerUI(int port, String bindingName, Function<ServerLogger, Remote> serviceFactory) {
+        super("RMI Server - " + bindingName);
         this.port = port;
         this.bindingName = bindingName;
+        this.serviceFactory = serviceFactory;
         initUI();
         wireActions();
     }
@@ -65,11 +69,10 @@ public class ServerUI extends JFrame {
     private void startServer() {
         try {
             logger = new ServerLogger(logArea);
-            // Ensure exported stub advertises a reachable LAN IP
             String serverIp = java.net.InetAddress.getLocalHost().getHostAddress();
             System.setProperty("java.rmi.server.hostname", serverIp);
             ensureRegistry();
-            serviceImpl = new CalculatorServiceImpl(logger);
+            serviceImpl = serviceFactory.apply(logger);
             registry.bind(bindingName, serviceImpl);
             logger.info("Server started and bound as '" + bindingName + "' on port " + port + " (hostname=" + System.getProperty("java.rmi.server.hostname") + ")");
             startButton.setEnabled(false);
