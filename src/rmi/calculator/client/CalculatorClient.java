@@ -4,10 +4,8 @@ import javax.swing.*;
 
 public class CalculatorClient {
     public static void main(String[] args) {
-        final int port = 5050;
-        final String binding = "CalculatorService";
         SwingUtilities.invokeLater(() -> {
-            LoginDialog dialog = new LoginDialog(null);
+            rmi.calculator.client.LoginDialog dialog = new rmi.calculator.client.LoginDialog(null);
             dialog.setVisible(true);
             if (!dialog.isApproved()) {
                 System.exit(0);
@@ -15,7 +13,8 @@ public class CalculatorClient {
             }
             String host = dialog.getHost();
             String username = dialog.getUsername();
-            ClientUI ui = new ClientUI(host, port, binding, username);
+            // Use old login: same host for both services, default ports 5050 (Math) and 5051 (Trig)
+            MultiServerClientUI ui = new MultiServerClientUI(host, 5050, host, 5051, username);
             ui.setVisible(true);
         });
     }

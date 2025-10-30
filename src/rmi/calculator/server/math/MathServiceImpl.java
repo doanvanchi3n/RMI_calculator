@@ -1,21 +1,21 @@
-package rmi.calculator.server;
+package rmi.calculator.server.math;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
-import rmi.calculator.common.CalculatorService;
+import rmi.calculator.common.MathService;
 import rmi.calculator.server.common.ServerLogger;
 
-public class CalculatorServiceImpl extends UnicastRemoteObject implements CalculatorService {
+public class MathServiceImpl extends UnicastRemoteObject implements MathService {
     private final ServerLogger logger;
 
-    public CalculatorServiceImpl(ServerLogger logger) throws RemoteException {
+    public MathServiceImpl(ServerLogger logger) throws RemoteException {
         super();
         this.logger = logger;
     }
 
     @Override
     public double add(double a, double b, String clientId) throws RemoteException {
-        logRequest(clientId, "add", a, b);
+        logRequest(clientId, "[Math] add", a, b);
         double res = a + b;
         logResult(clientId, res);
         return res;
@@ -23,7 +23,7 @@ public class CalculatorServiceImpl extends UnicastRemoteObject implements Calcul
 
     @Override
     public double sub(double a, double b, String clientId) throws RemoteException {
-        logRequest(clientId, "sub", a, b);
+        logRequest(clientId, "[Math] sub", a, b);
         double res = a - b;
         logResult(clientId, res);
         return res;
@@ -31,7 +31,7 @@ public class CalculatorServiceImpl extends UnicastRemoteObject implements Calcul
 
     @Override
     public double mul(double a, double b, String clientId) throws RemoteException {
-        logRequest(clientId, "mul", a, b);
+        logRequest(clientId, "[Math] mul", a, b);
         double res = a * b;
         logResult(clientId, res);
         return res;
@@ -39,10 +39,10 @@ public class CalculatorServiceImpl extends UnicastRemoteObject implements Calcul
 
     @Override
     public double div(double a, double b, String clientId) throws RemoteException {
-        logRequest(clientId, "div", a, b);
+        logRequest(clientId, "[Math] div", a, b);
         if (b == 0.0) {
             RemoteException ex = new RemoteException("Division by zero");
-            logger.error(withClient(clientId, "div error: division by zero"), ex);
+            logger.error(withClient(clientId, "[Math] div error: division by zero"), ex);
             throw ex;
         }
         double res = a / b;
@@ -52,7 +52,7 @@ public class CalculatorServiceImpl extends UnicastRemoteObject implements Calcul
 
     @Override
     public double pow(double a, double b, String clientId) throws RemoteException {
-        logRequest(clientId, "pow", a, b);
+        logRequest(clientId, "[Math] pow", a, b);
         double res = Math.pow(a, b);
         logResult(clientId, res);
         return res;
@@ -60,37 +60,13 @@ public class CalculatorServiceImpl extends UnicastRemoteObject implements Calcul
 
     @Override
     public double sqrt(double a, String clientId) throws RemoteException {
-        logRequest(clientId, "sqrt", a, null);
+        logRequest(clientId, "[Math] sqrt", a, null);
         if (a < 0.0) {
             RemoteException ex = new RemoteException("Square root of negative number");
-            logger.error(withClient(clientId, "sqrt error: negative input"), ex);
+            logger.error(withClient(clientId, "[Math] sqrt error: negative input"), ex);
             throw ex;
         }
         double res = Math.sqrt(a);
-        logResult(clientId, res);
-        return res;
-    }
-
-    @Override
-    public double sin(double a, String clientId) throws RemoteException {
-        logRequest(clientId, "sin", a, null);
-        double res = Math.sin(a);
-        logResult(clientId, res);
-        return res;
-    }
-
-    @Override
-    public double cos(double a, String clientId) throws RemoteException {
-        logRequest(clientId, "cos", a, null);
-        double res = Math.cos(a);
-        logResult(clientId, res);
-        return res;
-    }
-
-    @Override
-    public double tan(double a, String clientId) throws RemoteException {
-        logRequest(clientId, "tan", a, null);
-        double res = Math.tan(a);
         logResult(clientId, res);
         return res;
     }
