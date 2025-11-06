@@ -24,6 +24,10 @@ public class ServerLogger {
         append("ERROR", message + " | " + t.getClass().getSimpleName() + ": " + t.getMessage());
     }
 
+    public void warning(String message) {
+        append("WARNING", message);
+    }
+
     private void append(String level, String message) {
         final String ts = sdf.format(new Date());
         final String line = String.format("[%s] [%s] %s\n", ts, level, message);

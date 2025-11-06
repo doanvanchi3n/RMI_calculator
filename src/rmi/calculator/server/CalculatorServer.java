@@ -5,7 +5,7 @@ import rmi.calculator.server.common.ServerUI;
 
 public class CalculatorServer {
     public static void main(String[] args) {
-        final int port = 5050;
+        final int port = 5052; 
         final String binding = "CalculatorService";
         SwingUtilities.invokeLater(() -> {
             ServerUI ui = new ServerUI(port, binding, logger -> {

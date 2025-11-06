@@ -10,27 +10,47 @@ import javax.swing.*;
 import rmi.calculator.common.MathService;
 import rmi.calculator.common.TrigService;
 
+/**
+ * Giao diện máy tính client kết nối đến nhiều server RMI
+ * 
+ * CHỨC NĂNG:
+ * - Kết nối đến MathServer (port 5050) để xử lý phép toán cơ bản: +, -, *, /, ^, √
+ * - Kết nối đến TrigServer (port 5051) để xử lý hàm lượng giác: sin, cos, tan
+ * - Tự động phân tuyến yêu cầu đến server phù hợp
+ * - Log rõ ràng các thao tác và kết quả
+ * 
+ * QUY TRÌNH HOẠT ĐỘNG:
+ * 1. Khi khởi tạo: Tự động kết nối đến cả 2 server (nếu server chưa chạy thì chỉ log lỗi)
+ * 2. Người dùng nhấn phép toán: Client tự động gửi đến server phù hợp qua RMI
+ * 3. Server xử lý và trả kết quả: Hiển thị trên màn hình và log
+ */
 public class MultiServerClientUI extends JFrame {
-    private final JTextField display = new JTextField("0");
-    private final JLabel expressionLabel = new JLabel(" ");
-    private final JTextArea logArea = new JTextArea();
+    // Các thành phần giao diện
+    private final JTextField display = new JTextField("0");        // Màn hình hiển thị số
+    private final JLabel expressionLabel = new JLabel(" ");         // Hiển thị biểu thức đang nhập
+    private final JTextArea logArea = new JTextArea();              // Vùng log hoạt động
 
-    private MathService mathService;
-    private TrigService trigService;
-    private final String username;
-    private final String clientIp;
-    private final String clientTag;
-    private ClientLogger logger;
+    // Các service RMI - kết nối đến server
+    private MathService mathService;    // Service xử lý phép toán cơ bản (+, -, *, /, ^, √)
+    private TrigService trigService;    // Service xử lý hàm lượng giác (sin, cos, tan)
+    
+    // Thông tin client
+    private final String username;      // Tên người dùng
+    private final String clientIp;      // IP của client
+    private final String clientTag;    // Tag để log: username + IP
+    private ClientLogger logger;        // Logger để ghi log
 
-    private final String mathHost;
-    private final int mathPort;
-    private final String trigHost;
-    private final int trigPort;
+    // Thông tin kết nối server
+    private final String mathHost;      // IP của MathServer
+    private final int mathPort;        // Port của MathServer (mặc định 5050)
+    private final String trigHost;     // IP của TrigServer
+    private final int trigPort;        // Port của TrigServer (mặc định 5051)
 
-    private Double accumulator = null;
-    private String pendingOp = null; // "+", "-", "*", "/", "^"
-    private boolean resetInput = true;
-    private String pendingUnary = null; // "sqrt", "sin", "cos", "tan"
+    // Trạng thái máy tính
+    private Double accumulator = null;      // Số tích lũy (số bên trái phép toán)
+    private String pendingOp = null;       // Phép toán đang chờ: "+", "-", "*", "/", "^"
+    private boolean resetInput = true;     // Cờ reset input khi nhận kết quả
+    private String pendingUnary = null;    // Hàm một ngôi đang chờ: "sqrt", "sin", "cos", "tan"
 
     public MultiServerClientUI(String mathHost, int mathPort, String trigHost, int trigPort, String username) {
         super("RMI Scientific Calculator - Multi-Server Client");
@@ -137,20 +157,30 @@ public class MultiServerClientUI extends JFrame {
         }
     }
 
+    /**
+     * Kết nối đến 2 server RMI (MathServer và TrigServer)
+     * - Nếu server chưa chạy: chỉ log lỗi, không chặn ứng dụng
+     * - Người dùng vẫn có thể dùng các phép toán của server đang chạy
+     */
     private void connect() {
+        // Kết nối đến MathServer (port 5050)
         try {
             Registry mathReg = LocateRegistry.getRegistry(mathHost, mathPort);
             mathService = (MathService) mathReg.lookup("MathService");
             logger.info("Connected to MathService at " + mathHost + ":" + mathPort);
         } catch (Exception ex) {
             logger.error("Failed to connect to MathService", ex);
+            // Không hiển thị popup - để người dùng vẫn có thể dùng TrigServer
         }
+        
+        // Kết nối đến TrigServer (port 5051)
         try {
             Registry trigReg = LocateRegistry.getRegistry(trigHost, trigPort);
             trigService = (TrigService) trigReg.lookup("TrigService");
             logger.info("Connected to TrigService at " + trigHost + ":" + trigPort);
         } catch (Exception ex) {
             logger.error("Failed to connect to TrigService", ex);
+            // Không hiển thị popup - để người dùng vẫn có thể dùng MathServer
         }
     }
 
@@ -213,25 +243,35 @@ public class MultiServerClientUI extends JFrame {
         }
     }
 
+    /**
+     * Xử lý phép toán 2 ngôi: +, -, *, /, ^
+     * Tất cả phép toán 2 ngôi đều được gửi đến MathServer qua RMI
+     */
     private void performBinaryOp(String op) {
         if (mathService == null) {
             logger.info("MathService not connected");
             return;
         }
         try {
+            // Nếu có hàm một ngôi đang chờ, thực hiện nó trước
             if (pendingUnary != null && !resetInput) {
                 double val = currentValue();
                 double unaryRes = applyUnaryCompute(pendingUnary, val);
                 display.setText(Double.toString(unaryRes));
                 pendingUnary = null;
             }
+            
             double val = currentValue();
             if (accumulator == null) {
+                // Lần đầu: lưu số hiện tại vào accumulator
                 accumulator = val;
             } else if (pendingOp != null && !resetInput) {
+                // Đã có phép toán chờ: thực hiện ngay (ví dụ: 2 + 3 + 4)
                 accumulator = computeMathRemote(accumulator, val, pendingOp);
                 display.setText(Double.toString(accumulator));
             }
+            
+            // Lưu phép toán mới và chờ số tiếp theo
             pendingOp = op;
             resetInput = true;
             logger.info("Pending op='" + op + "' accumulator=" + accumulator + " input=" + val);
@@ -296,23 +336,32 @@ public class MultiServerClientUI extends JFrame {
         }
     }
 
+    /**
+     * Gọi hàm một ngôi qua RMI - tự động phân tuyến đến server phù hợp
+     * - sqrt → MathServer
+     * - sin, cos, tan → TrigServer
+     */
     private double applyUnaryCompute(String fn, double val) throws RemoteException {
         switch (fn) {
-            case "sqrt": return mathService.sqrt(val, clientTag);
-            case "sin": return trigService.sin(val, clientTag);
-            case "cos": return trigService.cos(val, clientTag);
-            case "tan": return trigService.tan(val, clientTag);
+            case "sqrt": return mathService.sqrt(val, clientTag);  // Gọi MathServer
+            case "sin": return trigService.sin(val, clientTag);    // Gọi TrigServer
+            case "cos": return trigService.cos(val, clientTag);    // Gọi TrigServer
+            case "tan": return trigService.tan(val, clientTag);     // Gọi TrigServer
             default: throw new RemoteException("Unsupported unary: " + fn);
         }
     }
 
+    /**
+     * Gọi phép toán 2 ngôi qua RMI đến MathServer
+     * Tất cả phép toán 2 ngôi đều do MathServer xử lý
+     */
     private double computeMathRemote(double a, double b, String op) throws RemoteException {
         switch (op) {
-            case "+": return mathService.add(a, b, clientTag);
-            case "-": return mathService.sub(a, b, clientTag);
-            case "*": return mathService.mul(a, b, clientTag);
-            case "/": return mathService.div(a, b, clientTag);
-            case "^": return mathService.pow(a, b, clientTag);
+            case "+": return mathService.add(a, b, clientTag);  // Gửi đến MathServer
+            case "-": return mathService.sub(a, b, clientTag);  // Gửi đến MathServer
+            case "*": return mathService.mul(a, b, clientTag);   // Gửi đến MathServer
+            case "/": return mathService.div(a, b, clientTag);   // Gửi đến MathServer
+            case "^": return mathService.pow(a, b, clientTag);  // Gửi đến MathServer
             default: throw new RemoteException("Unsupported op: " + op);
         }
     }
